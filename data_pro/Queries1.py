@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 #!-*-coding:utf-8 -*-
-
 """
 @version: python3.7
-@author: ‘v-enshi‘
+@author: v-enshi
 @license: Apache Licence 
-@contact: 123@qq.com@site:
+@contact: 123@qq.com
+@site: 
 @software: PyCharm
-@file: Queries2.py
-@time: 2019/4/22 14:21
+@file: Queries1.py
+@time: 2019/4/23 15:02
 """
+
 
 import torch
 import torch.nn as nn
@@ -21,8 +22,8 @@ import numpy as np
 import time
 torch.manual_seed(1)
 
-use_gpu = False
-#use_gpu = True
+#use_gpu = False
+use_gpu = True
 
 if use_gpu:
     device = torch.device("cuda")
@@ -49,7 +50,7 @@ def data_loading(filepath):
     return data
 
 if use_gpu:
-    training_path = r"../data/python/python100k_train.json"
+    training_path = r"../data/python/python50k_eval.json"
 else:
     str = r"D:\v-enshi\Language model\suggestion\Code Completion with Neural Attention and Pointer Networks"
     training_path = str + r"\data\python\f10_.json"
@@ -61,30 +62,16 @@ training_data = data_loading(training_path)
 
 now = time.time()
 print("data loading",now-time_start)
-## 2. build vocabulary
-def build_vocab(data):
-    type_to_ix = {"EOF": 0}
-    word_to_ix = {}
-    for i in range(len(data)):
-        for item in data[i]:
-            if item["type"] not in type_to_ix:
-                type_to_ix[item["type"]] = len(type_to_ix)
-            if "value" in item.keys():
-                if item["value"] in word_to_ix:
-                    word_to_ix[item["value"]] = word_to_ix[item["value"]] + 1
-                else:
-                    word_to_ix[item["value"]] = 1
 
-    # 1k 10k  50k vocabulary
-    L = sorted(word_to_ix.items(), key=lambda item: item[1], reverse=True)
-    value_to_ix = {"UNK": 0, "EOF": 1}
-    for i in range(max_vocab_size):
-        value_to_ix[L[i][0]] = len(value_to_ix)
-    return type_to_ix, value_to_ix
+## 2. load vocabulary
 
-type_vocab,value_vocab = build_vocab(training_data)
+arr=np.load(r"../data/python/training.npz")
+value_vocab = arr['value_vocab'].item()
+type_vocab = arr['type_vocab'].item()
 
 
+now = time.time()
+print("vocabulary loading",now-time_start)
 
 # 3. make the queries
 def Queries(data):
@@ -163,7 +150,7 @@ target = np.array(target)
 
 
 
-np.savez('../data/python/training.npz',input_data = input ,parent_data = parent ,target_data = target, \
+np.savez('../data/python/eval.npz',input_data = input ,parent_data = parent ,target_data = target, \
                                         value_vocab = value_vocab,type_vocab = type_vocab)
 now  = time.time()
 print("done",now -  time_start)
