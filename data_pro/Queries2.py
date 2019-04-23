@@ -147,7 +147,12 @@ for i in range(len(training_queries)):
     target = np.append(target,torch.tensor([training_queries[i][3]], dtype=torch.long, device=device))
 
 
-np.savez('array_save.npz',input_data = input ,parent_data = parent ,target_data = )
+np.savez('array_save.npz',input_data = input ,parent_data = parent ,target_data = target)
+
+arr=np.load('array_save.npz')
+print (arr['input_data'])
+print (arr['parent_data'])
+print (arr['target_data'])
 
 """
 
