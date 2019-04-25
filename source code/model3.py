@@ -1,24 +1,22 @@
 #!/usr/bin/env python
-# !-*-coding:utf-8 -*-
+#!-*-coding:utf-8 -*-
 """
 @version: python3.7
 @author: v-enshi
-@license: Apache Licence
+@license: Apache Licence 
 @contact: 123@qq.com
-@site:
+@site: 
 @software: PyCharm
-@file: Queries2.py
-@time: 2019/4/22 14:21
-
-traing epoch =8
-lstm+attan
-no test
+@file: model3.py
+@time: 2019/4/23 22:38
+epoch = 16 , add testing
 """
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-
+import json
 import random
 import numpy as np
 import time
@@ -46,9 +44,20 @@ targets = arr['target_data']
 value_vocab = arr['value_vocab'].item()
 type_vocab = arr['type_vocab'].item()
 
+arr = np.load(r"../data/python/eval.npz")
+inputs_test = arr['input_data']
+parents_test = arr['parent_data']
+targets_test = arr['target_data']
 
-data_loading = time.time()
-print("data loading", data_loading - time_start)
+
+
+
+
+
+
+
+now = time.time()
+print("data loading", now - time_start)
 
 
 ##2. parameters setting
@@ -63,6 +72,11 @@ else:
     HIDDEN_SIZE = 5
 
     BATCH_SIZE = 1
+
+
+
+
+
 
 ## 3.1 LSTM component
 class LSTM_component(nn.Module):
@@ -79,7 +93,6 @@ class LSTM_component(nn.Module):
         self.lstm = nn.LSTM(value_dim + type_dim, hidden_dim)
 
     def forward(self, sentence, hc):
-
         embeds_type = self.type_embeddings(sentence[0])
         embeds_value = self.value_embeddings(sentence[1])
         embeds = torch.cat([embeds_value, embeds_type], 1).view(len(sentence[0]), 1, -1)
@@ -126,7 +139,7 @@ class Context_atten(nn.Module):
         one_TL = torch.ones(self.context_window, 1, device=device)  # (L,1)
 
         At = torch.mm(torch.tanh(torch.mm(Mt, self.Wm) + torch.mm(one_TL, self.linear1(hc.view(1, -1)))), self.V)
-        alphat = F.softmax(At.view(1, -1), dim=1)  # [1,3]
+        alphat = F.log_softmax(At.view(1, -1), dim=1)  # [1,3]
         ct = torch.mm(alphat, Mt)
         return alphat, ct
 
@@ -197,21 +210,18 @@ decay = 0.6
 optimizer = optim.SGD(model.parameters(), lr=learning_rate, weight_decay=decay)
 clip = 5
 nn.utils.clip_grad_norm_(model.parameters(), clip)
-losses = []
 
-staring_training = time.time()
-print("staring training ",staring_training-time_start)
-num_epochs=8
-for epoch in range(num_epochs):
-    print('Epoch {}/{}'.format(epoch, num_epochs - 1))
-    print('-' * 10)
+losses = []
+eval_losses = []
+length = len(targets)
+for epoch in range(8):
     total_loss = 0
     print_loss_total = 0  # Reset every print_every
     plot_loss_total = 0  # Reset every plot_every
     # query = [context,   predict_node,    position,   same_node_position,   parent_node_position]
-    print(len(targets))
+    #print(len(targets))
     for i in range(len(targets)):
-        start = time.time()
+
         # step1 init
         optimizer.zero_grad()
         # step 2 prepare the data
@@ -233,18 +243,30 @@ for epoch in range(num_epochs):
 
         # loss
         total_loss += loss.item()
-        topv, topi = yt_point.data.topk(1)
-        eval_index = topi.squeeze().detach()
+        #topv, topi = yt_point.data.topk(1)
+        #eval_index = topi.squeeze().detach()
         # print(eval_index)
-        end = time.time()
-        print(i,"batch time spend",end-start)
-
     now = time.time()
-    length = len(inputs[i][0])
     print('epoch = %d  time spend:%s  loss average%.4f' % (
     epoch + 1, now - time_start, total_loss / length))
+
+
     losses.append(total_loss / length)
 
 print(losses)
 torch.save(model.state_dict(), 'params_lstm_attn.pkl')
 model.load_state_dict(torch.load('params_lstm_attn.pkl'))
+'''
+# 5 testing
+with torch.no_grad():
+    for i in range(len(targets_test)):
+        # step 2 prepare the data
+        input = [torch.tensor(inputs_test[i][0], device=device), torch.tensor(inputs_test[i][1], device=device)]
+        parent = parents_test[i]
+        target = torch.tensor([targets_test[i]], dtype=torch.long, device=device)
+        # step 3 get the scorece
+        yt_point = model(input, model.initHidden(), parent)
+        # step 4 train
+        loss = loss_function(yt_point.view(1, -1), target)
+'''
+

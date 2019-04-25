@@ -3,7 +3,7 @@
 
 """
 @version: python3.7
-@author: ‘v-enshi‘
+@author: v-enshi
 @license: Apache Licence 
 @contact: 123@qq.com@site:
 @software: PyCharm
@@ -15,11 +15,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import json
+
 import random
 import numpy as np
 import time
 torch.manual_seed(1)
+
+import json # load data
+import  pickle #save data
 
 use_gpu = False
 #use_gpu = True
@@ -63,7 +66,7 @@ now = time.time()
 print("data loading",now-time_start)
 ## 2. build vocabulary
 def build_vocab(data):
-    type_to_ix = {"EOF": 0}
+    type_to_ix = {"EOF": 0,"UNK":1}
     word_to_ix = {}
     for i in range(len(data)):
         for item in data[i]:
@@ -77,7 +80,7 @@ def build_vocab(data):
 
     # 1k 10k  50k vocabulary
     L = sorted(word_to_ix.items(), key=lambda item: item[1], reverse=True)
-    value_to_ix = {"UNK": 0, "EOF": 1}
+    value_to_ix = {"EOF": 0,"UNK":1}
     for i in range(max_vocab_size):
         value_to_ix[L[i][0]] = len(value_to_ix)
     return type_to_ix, value_to_ix
@@ -134,15 +137,12 @@ training_queries = Queries(training_data)
 def prepare_sequence(seq, val_to_ix, type_to_ix):  # trans code to idex
     idxs_ty = []
     idxs_vl = []
+    UNK = 1
     for node in seq:
-        if "value" in node.keys():
-            if node["value"] in val_to_ix.keys():
-                idxs_vl.append(val_to_ix[ node["value"] ])
-            else:
-                idxs_vl.append(val_to_ix["UNK"])
-        else:
-            idxs_vl.append(val_to_ix["UNK"])
-        idxs_ty.append(type_to_ix[node["type"]])
+
+        value_str = node.get('value', 'UNK')
+        idxs_vl.append(val_to_ix.get(value_str, UNK))
+        idxs_ty.append(type_to_ix[node.get('type', 'UNK')])
     #print("np.array([idxs_ty, idxs_vl])",np.array([idxs_ty, idxs_vl]))
     return [idxs_ty, idxs_vl]
 
@@ -155,7 +155,7 @@ for i in range(len(training_queries)):
     input.append( prepare_sequence(sequence, value_vocab, type_vocab))
     parent.append(training_queries[i][4])
     target.append(training_queries[i][3])
-
+#print("input",input)
 input  = np.array(input)
 parent = np.array(parent)
 target = np.array(target)

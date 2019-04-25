@@ -121,15 +121,19 @@ training_queries = Queries(training_data)
 def prepare_sequence(seq, val_to_ix, type_to_ix):  # trans code to idex
     idxs_ty = []
     idxs_vl = []
+    UNK = 1
     for node in seq:
-        if "value" in node.keys():
-            if node["value"] in val_to_ix.keys():
-                idxs_vl.append(val_to_ix[ node["value"] ])
-            else:
-                idxs_vl.append(val_to_ix["UNK"])
+
+        '''
+        if node["value"] in val_to_ix.keys():
+            idxs_vl.append(val_to_ix[ node["value"] ])
         else:
             idxs_vl.append(val_to_ix["UNK"])
-        idxs_ty.append(type_to_ix[node["type"]])
+        '''
+        value_str = node.get('value', 'UNK')
+        type_str  =  node.get('type', 'UNK')
+        idxs_vl.append(val_to_ix.get(value_str , UNK))
+        idxs_ty.append(type_to_ix.get(type_str,UNK))
     #print("np.array([idxs_ty, idxs_vl])",np.array([idxs_ty, idxs_vl]))
     return [idxs_ty, idxs_vl]
 

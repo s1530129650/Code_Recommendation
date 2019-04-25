@@ -10,14 +10,48 @@
 @file: testlosad.py
 @time: 2019/4/19 16:41
 """
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+import  pickle
 import json
+import random
 import numpy as np
+import time
+torch.manual_seed(1)
+import torch.nn.utils.rnn as rnn_utils
+from torch.utils.data import DataLoader
+import torch.utils.data as data
+
+BATCH_SIZE = 2
+
+class MyData(data.Dataset):
+    def __init__(self, input_value, input_type, target, parent):
+        self.input_value = input_value
+        self.input_type = input_type
+        self.target = target
+        self.parent = parent
+
+    def __len__(self):
+        return len(self.target)
+
+    def __getitem__(self, idx):
+        return self.input_value[idx], self.input_type[idx], self.target[idx], self.parent[idx]
 
 
-with open(r"..\data\python\f2.json", 'r') as load_f_again:
-    data1 = load_f_again.readlines()
+# 读取
+with open('../data/python/training.pickle', 'rb') as f:
+    data = pickle.load(f)
 
-    data= json.loads(data1[0])
+data_loader = DataLoader(data, batch_size= BATCH_SIZE, shuffle=True)
+batch_x = iter(data_loader).next()
+print(batch_x[0])
+'''
+for i,data2 in enumerate(data_loader,0):
+    print(i)
+    print(data2)
+'''
 
-    print(data)
+
 
