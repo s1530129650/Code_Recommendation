@@ -1,31 +1,27 @@
 #!/usr/bin/env python
 #!-*-coding:utf-8 -*-
-
 """
 @version: python3.7
 @author: v-enshi
 @license: Apache Licence 
-@contact: 123@qq.com@site:
+@contact: 123@qq.com
+@site: 
 @software: PyCharm
-@file: Queries2.py
-@time: 2019/4/22 14:21
+@file: Queries_pkl.py
+@time: 2019/4/25 9:46
 """
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-
+import  json
 import random
 import numpy as np
 import time
 torch.manual_seed(1)
 
-import json # load data
-import  pickle #save data
-
 use_gpu = False
-#use_gpu = True
+use_gpu = True
 
 if use_gpu:
     device = torch.device("cuda")
@@ -60,8 +56,6 @@ else:
 
 training_data = data_loading(training_path)
 
-
-
 now = time.time()
 print("data loading",now-time_start)
 ## 2. build vocabulary
@@ -87,7 +81,8 @@ def build_vocab(data):
 
 type_vocab,value_vocab = build_vocab(training_data)
 
-
+now = time.time()
+print("build vocabulary",now-time_start)
 
 # 3. make the queries
 def Queries(data):
@@ -130,10 +125,15 @@ def Queries(data):
         data_rd.append(query)
     return data_rd
 training_queries = Queries(training_data)
+training_queries.sort( key=lambda x: x[2],reverse=True) # sort
 #print(training_queries)
 
 
-#4. text -> idex
+now = time.time()
+print("make the queries",now-time_start)
+
+
+#4 text -> index
 def prepare_sequence(seq, val_to_ix, type_to_ix):  # trans code to idex
     idxs_ty = []
     idxs_vl = []
@@ -144,41 +144,67 @@ def prepare_sequence(seq, val_to_ix, type_to_ix):  # trans code to idex
         idxs_vl.append(val_to_ix.get(value_str, UNK))
         idxs_ty.append(type_to_ix[node.get('type', 'UNK')])
     #print("np.array([idxs_ty, idxs_vl])",np.array([idxs_ty, idxs_vl]))
-    return [idxs_ty, idxs_vl]
+    return torch.tensor([idxs_vl, idxs_ty],dtype = torch.long)
 
-input = []
+input_value = []
+input_type = []
 parent = []
 target = []
 
 for i in range(len(training_queries)):
     sequence = training_queries[i][0]
-    input.append( prepare_sequence(sequence, value_vocab, type_vocab))
-    parent.append(training_queries[i][4])
-    target.append(training_queries[i][3])
-#print("input",input)
-input  = np.array(input)
-parent = np.array(parent)
-target = np.array(target)
+    [input_val, input_ty] = prepare_sequence(sequence, value_vocab, type_vocab)
+    par = torch.tensor(training_queries[i][4],dtype = torch.long)
+    targ = torch.tensor(training_queries[i][3],dtype = torch.long)
+
+    input_value.append(input_val)
+    input_type.append(input_ty)
+    parent.append(par)
+    target.append(targ)
+
+now = time.time()
+print("text -> index",now-time_start)
+
+
+#5 padding and save
+import torch.nn.utils.rnn as rnn_utils
+from torch.utils.data import DataLoader
+import torch.utils.data as data
+
+class MyData(data.Dataset):
+    def __init__(self,data_seq, input_value, input_type, target, parent):
+        self.input_value = input_value
+        self.input_type = input_type
+        self.target = target
+        self.parent = parent
+        self.length = len(self.target)
+        self.data_length = [len(sq) for sq in data_seq]
+
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, idx):
+        return self.input_type[idx],self.input_value[idx], self.data_length[idx], self.target[idx], self.parent[idx]
+
+
+x = rnn_utils.pad_sequence(input_value, batch_first=True)
+y = rnn_utils.pad_sequence(input_type, batch_first=True)
+dataAll = MyData(input_value,x,y,target,parent)
+#print(dataAll.data_length)
+
+now = time.time()
+print("5. padding ",now-time_start)
+
+# save
+import pickle
+with open('../data/python/training.pickle', 'wb') as f:
+    pickle.dump(dataAll, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+np.savez('../data/python/vocabulary.npz',value_vocab = value_vocab,type_vocab = type_vocab)
 
 
 
 
-np.savez('../data/python/training.npz',input_data = input ,parent_data = parent ,target_data = target, \
-                                        value_vocab = value_vocab,type_vocab = type_vocab)
-now  = time.time()
-print("done",now -  time_start)
-#print("value_vocab = ",value_vocab)
-print(len(value_vocab))
-'''
-arr=np.load('data_save.npz')
-print (arr['input_data'])
-print (arr['parent_data'])
-print (arr['target_data'])
 
 
-with codecs.open(r"..\data\python\QUERIES\python_train.json",'w', 'utf-8') as outf:
-    for items in training_queries:
-        json.dump(items, outf, ensure_ascii=False)
-        outf.write('\n')
-
-'''
