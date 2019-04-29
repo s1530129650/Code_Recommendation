@@ -37,7 +37,7 @@ use_gpu = True
 
 if use_gpu:
     device = torch.device("cuda")
-    max_vocab_size = 10000
+    max_vocab_size = 50000
     CONTEXT_WINDOW = 100
 else:
     device = torch.device("cpu")
@@ -71,7 +71,7 @@ training_data = data_loading(training_path)
 now = time.time()
 print("data loading",now-time_start)
 ## 2. load vocabulary
-with np.load(r"../data/python/vocabulary.npz", allow_pickle=True) as arr:
+with np.load(r"../data/python/vocabulary_50k.npz", allow_pickle=True) as arr:
     value_vocab = arr['value_vocab'].item()
     type_vocab = arr['type_vocab'].item()
 
@@ -194,7 +194,7 @@ print("5. padding ",now-time_start)
 
 # save
 import pickle
-with open('../data/python/eval.pickle', 'wb') as f:
+with open('../data/python/eval_50k.pickle', 'wb') as f:
     pickle.dump(dataAll, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 

@@ -47,12 +47,12 @@ with open(r"..\data\python\f2.json",'r') as load_f_again:
 data = []
 with codecs.open(r"..\data\python\python100k_train.json", "r") as f:
     data1 = f.readlines()
-    for line in data1[:10]:
+    for line in data1[:20]:
         dic = json.loads(line)
         data.append(dic)
         print (json.dumps(dic, indent=4, ensure_ascii=False))
 
-with codecs.open(r"..\data\python\f10_.json",'w', 'utf-8') as outf:
+with codecs.open(r"..\data\python\f20_.json",'w', 'utf-8') as outf:
     for items in data:
         json.dump(items, outf, ensure_ascii=False)
         outf.write('\n')

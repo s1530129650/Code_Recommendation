@@ -7,9 +7,10 @@
 @contact: 123@qq.com
 @site: 
 @software: PyCharm
-@file: Queries_pkl.py
-@time: 2019/4/25 9:46
+@file: Queries_len.py
+@time: 2019/4/26 18:30
 """
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -21,16 +22,18 @@ import time
 torch.manual_seed(1)
 
 use_gpu = False
-use_gpu = True
+#use_gpu = True
 
 if use_gpu:
     device = torch.device("cuda")
-    max_vocab_size = 50000
+    max_vocab_size = 100000
     CONTEXT_WINDOW = 100
+    MAX_Sequence_Len = 2000
 else:
     device = torch.device("cpu")
     max_vocab_size = 100
     CONTEXT_WINDOW = 100
+    MAX_Sequence_Len = 500
 
 
 time_start = time.time()
@@ -51,7 +54,7 @@ if use_gpu:
     training_path = r"../data/python/python100k_train.json"
 else:
     str = r"D:\v-enshi\Language model\suggestion\Code Completion with Neural Attention and Pointer Networks"
-    training_path = str + r"\data\python\f10_.json"
+    training_path = str + r"\data\python\f20_.json"
 
 
 training_data = data_loading(training_path)
@@ -74,7 +77,6 @@ def build_vocab(data):
 
     # 1k 10k  50k vocabulary
     L = sorted(word_to_ix.items(), key=lambda item: item[1], reverse=True)
-    print("L len",len(L),L[max_vocab_size][1])
     value_to_ix = {"EOF": 0,"UNK":1}
     for i in range(max_vocab_size):
         value_to_ix[L[i][0]] = len(value_to_ix)
@@ -109,7 +111,10 @@ def Queries(data):
             if data[i][rd]["type"] == data[i][j]["type"] and "value" in data[i][j].keys() and data[i][rd]["value"] == \
                     data[i][j]["value"]:
                 #print("j$$$$$$$$$$$",rd - 1, rd - CONTEXT_WINDOW - 1,j,rd - j - 1)
-                query = [data[i][:rd], [data[i][rd]], rd, rd - j - 1]
+                if rd < MAX_Sequence_Len:
+                    query = [data[i][:rd], [data[i][rd]], rd, rd - j - 1]
+                else:
+                    query = [data[i][rd - MAX_Sequence_Len :rd], [data[i][rd]], rd, rd - j - 1]
                 break
         if j == rd - CONTEXT_WINDOW:  # there is no same node in context
             continue
@@ -199,10 +204,10 @@ print("5. padding ",now-time_start)
 
 # save
 import pickle
-with open('../data/python/training_50k.pickle', 'wb') as f:
+with open('../data/python/training.pickle', 'wb') as f:
     pickle.dump(dataAll, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-np.savez('../data/python/vocabulary_50k.npz',value_vocab = value_vocab,type_vocab = type_vocab)
+np.savez('../data/python/vocabulary.npz',value_vocab = value_vocab,type_vocab = type_vocab)
 
 
 
