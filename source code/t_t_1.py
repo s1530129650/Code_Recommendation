@@ -29,7 +29,7 @@ from model import main_model
 time_start = time.time()
 
 use_gpu = False
-#use_gpu = True
+use_gpu = True
 
 ##1. parameters setting
 if use_gpu:
@@ -40,6 +40,7 @@ if use_gpu:
     EMBEDDING_type = 256
     HIDDEN_SIZE = 512
     BATCH_SIZE = 10
+    TopK = [1,5,10]
 
 else:
     device = torch.device("cpu")
@@ -49,6 +50,7 @@ else:
     EMBEDDING_type = 3
     HIDDEN_SIZE = 5
     BATCH_SIZE = 2
+    TopK = [1, 5, 10]
 
 # 2.data loading
 class MyData(data.Dataset):
@@ -73,13 +75,13 @@ with np.load(r"../data/python/vocabulary_50k.npz", allow_pickle=True) as arr:
     type_vocab = arr['type_vocab'].item()
 
 
-with open('../data/python/training2_50k.pickle', 'rb') as f:
+with open('../data/python/training_ALL_50k.pickle', 'rb') as f:
     data_train = pickle.load(f)
 len_train = data_train.length
 print("len_train",len_train)
 data_loader_train = DataLoader(data_train, batch_size= BATCH_SIZE, shuffle=True, drop_last=True)
 
-with open('../data/python/eval2_50k.pickle', 'rb') as f:
+with open('../data/python/test2_50k.pickle', 'rb') as f:
     data_eval = pickle.load(f)
 len_eval = data_eval.length
 print("len_eval",len_eval)
@@ -124,7 +126,16 @@ def train(model,optimizer,data_loader,loss_function):
 #4 eval
 def eval(model,eval_data,loss_function):
     model.eval()
+    #AP
+    def AP(pre, ground_true):
+        Ap = 0
+        for i in range(len(pre)):
+            if pre[i] == ground_true:
+                Ap = Ap + 1 / (i + 1)
+        return Ap
+
     total_loss = 0
+    A_P = []
     for i, data4 in enumerate(eval_data,0):
         start = time.time()
 
@@ -136,10 +147,18 @@ def eval(model,eval_data,loss_function):
         input_len = torch.tensor(list(input_len))
         target = torch.tensor(list(target),device = device)
         parent = torch.tensor(list(parent))
-        # step 3 get the scorece
+        # step 2 get the scorece
         yt_point = model(input,input_len, parent)
-        # step 4 train
+        #step 3 MAP
+        output = yt_point.squeeze(0)
+        #topK = [1, 2, 10]
+        _, pred = output.topk(TopK[1], 1)
+
+        for batch in range(BATCH_SIZE):
+            A_P.append(AP(pred[batch], target[batch]))
+        # step 4 loss
         loss = loss_function(yt_point.squeeze(0), target.to(device))
+
         # loss
         total_loss += loss.item()
         #topv, topi = yt_point.data.topk(1)
@@ -147,13 +166,14 @@ def eval(model,eval_data,loss_function):
         # print(eval_index)
         end = time.time()
         #print(i, "batch time spend", end - start)
-    return total_loss
-
+    m_a_p = sum(A_P) / len_eval
+    return total_loss,m_a_p
 
 def main():
     # 3.model init
     model = main_model(len(value_vocab), EMBEDDING_value, len(type_vocab), EMBEDDING_type, HIDDEN_SIZE, BATCH_SIZE,
                        CONTEXT_WINDOW).to(device)
+
     loss_function = nn.NLLLoss()
     learning_rate = 0.001
     #decay = 0.6
@@ -162,18 +182,19 @@ def main():
     nn.utils.clip_grad_norm_(model.parameters(), clip)
     losses_train = []
     losses_eval = []
+    M_A_P = []
 
     staring_training = time.time()
     print("staring training ", staring_training - time_start)
 
     ##  training
-    num_epochs= 5
+    num_epochs= 100
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch+1, num_epochs))
         print('-' * 10)
 
         train_loss = train(model,optimizer,data_loader_train,loss_function)
-        val_loss = eval(model,data_loader_eval,loss_function)
+        val_loss ,m_A_p = eval(model,data_loader_eval,loss_function)
         now = time.time()
 
         losses_train.append(train_loss / len_train)
@@ -181,15 +202,17 @@ def main():
         print("[Epoch:%d] train_loss:%f val_loss:%f | time spend: %f"
               % (epoch + 1, train_loss / len_train,val_loss/len_eval,(now - time_start)/60))
         losses_eval.append(val_loss / len_eval)
-
-        print("train loss",losses_train)
-        print("eval loss",losses_eval)
-    torch.save(model.state_dict(), 'params_lstm_attn_50k.pkl')
-    model.load_state_dict(torch.load('params_lstm_attn_50k.pkl'))
+        M_A_P.append(m_A_p)
+        if epoch % 10 == 0 :
+            print("train loss",losses_train)
+            print("eval loss",losses_eval)
+            print("eval MAP", M_A_P)
+        torch.save(model.state_dict(),r"./para/"+str(epoch+1)+'params_lstm_attn_50k.pkl')
+    model.load_state_dict(torch.load(r"./para/"+str(epoch+1)+'params_lstm_attn_50k.pkl'))
 
     import pandas as pd
 
-    dataframe = pd.DataFrame({'train_loss': losses_train, 'eval_loss': losses_eval})
+    dataframe = pd.DataFrame({'train_loss': losses_train, 'eval_loss': losses_eval,"eval MAP": M_A_P})
     dataframe.to_csv("test.csv", index=False, sep=',')
 
 

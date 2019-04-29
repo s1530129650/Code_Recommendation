@@ -15,6 +15,7 @@ import torch
 import torch.nn.utils.rnn as rnn_utils
 from torch.utils.data import DataLoader
 import torch.utils.data as data
+import numpy as np
 
 use_gpu = False
 use_gpu = True
@@ -47,14 +48,42 @@ class MyData(data.Dataset):
 #vocabulary
 
 
-with open('../data/python/training.pickle', 'rb') as f:
+with open('../data/python/training1_50k.pickle', 'rb') as f:
     data_train = pickle.load(f)
 len_train = data_train.length
-data_loader_train = DataLoader(data_train, batch_size= BATCH_SIZE, shuffle=True, drop_last=True)
+print(len_train)
+
+with open('../data/python/eval1_50k.pickle', 'rb') as f:
+    data_eval = pickle.load(f)
+len_eval = data_eval.length
+print(len_eval)
+
+#data_loader_train = DataLoader(data_train, batch_size= BATCH_SIZE, shuffle=True, drop_last=True)
 #data_loader = rnn_utils.pad_sequence(data_loader_train, batch_first=True, padding_value=0)
 #data_loder = 0 input_type, 1 input_value,2 input_length ,3 target,4  parent
-for i, data4 in enumerate(data_loader_train ,0):
+
+countList = np.array([])
+for i, data4 in enumerate(data_train ,0):
     print('iter {}'.format(i))
 
-    print(data4[3])
+    #countList = np.append(countList, data4[2].numpy())
     print('-' * 10)
+    print(data4[3])
+    print(data4[2])
+    print('-' * 10)
+    if i == 20: break
+'''
+max_value = np.max(countList)
+min_value = np.min(countList)
+avg_value = np.mean(countList)
+var_value =  np.var(countList)
+std_value = np.std(countList,ddof=1)
+MT2000 = np.sum(countList > 2000)
+print("taining set")
+print("max:",max_value)
+print("min:",min_value)
+print("avg:",avg_value)
+print("var:",var_value)
+print("std:",std_value)
+print("the len of sequence more than 2000:",MT2000 ,MT2000 / countList.size)
+'''

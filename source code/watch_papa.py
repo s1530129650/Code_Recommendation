@@ -39,14 +39,15 @@ else:
     HIDDEN_SIZE = 5
     BATCH_SIZE = 2
 
-with np.load(r"../data/python/vocabulary.npz", allow_pickle=True) as arr:
+with np.load(r"../data/python/vocabulary_50k.npz", allow_pickle=True) as arr:
     value_vocab = arr['value_vocab'].item()
     type_vocab = arr['type_vocab'].item()
 
-model = main_model(len(value_vocab), EMBEDDING_value, len(type_vocab), EMBEDDING_type, HIDDEN_SIZE, BATCH_SIZE,CONTEXT_WINDOW).to(device)
-model.load_state_dict(torch.load('params_lstm_attn.pkl'))
+#model = main_model(len(value_vocab), EMBEDDING_value, len(type_vocab), EMBEDDING_type, HIDDEN_SIZE, BATCH_SIZE,CONTEXT_WINDOW).to(device)
+#model.load_state_dict(torch.load('params_lstm_attn.pkl'))
 
-
+print(len(type_vocab ),len(value_vocab))
+'''
 for param in model.parameters():
     print(len(param))
     print(param)
@@ -55,3 +56,5 @@ for param in model.parameters():
 for name, param in model.named_parameters():
     if param.requires_grad:
         print(name)
+        
+'''

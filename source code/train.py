@@ -25,21 +25,21 @@ import torch.nn.utils.rnn as rnn_utils
 from torch.utils.data import DataLoader
 import torch.utils.data as data
 
-from model import main_model
+from model_traditional_attn import main_model
 
 time_start = time.time()
 
 use_gpu = False
-#use_gpu = True
+use_gpu = True
 
 ##1. parameters setting
 if use_gpu:
     device = torch.device("cuda")
-    max_vocab_size = 10000
+    max_vocab_size = 50000
     CONTEXT_WINDOW = 100
-    EMBEDDING_value = 1200
-    EMBEDDING_type = 300
-    HIDDEN_SIZE = 1500
+    EMBEDDING_value = 256
+    EMBEDDING_type = 128
+    HIDDEN_SIZE = 512
     BATCH_SIZE = 10
 
 else:
@@ -143,12 +143,12 @@ for epoch in range(num_epochs):
 
         # step 4 train
         loss = loss_function(yt_point.squeeze(0), target.to(device))
-
+        '''
         print("yt_point", yt_point.shape, yt_point)
         print("yt_point_seq", yt_point.squeeze(0).shape)
         print("target", target.shape, target)
         print(loss.item())
-
+        '''
 
         loss.backward()
         optimizer.step()
@@ -166,6 +166,7 @@ for epoch in range(num_epochs):
     print('epoch = %d  time spend:%s  loss%.8f' % (
     epoch + 1, (now - time_start)/60, total_loss ))
     losses.append(total_loss )
+
 
 print(losses)
 torch.save(model.state_dict(), 'params_lstm_attn.pkl')
