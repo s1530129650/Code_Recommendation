@@ -107,7 +107,9 @@ def build_vocab(data1,data2):
 
 type_vocab,value_vocab = build_vocab(training_data,eval_data)
 print("vocab len: type:",len(type_vocab ),"value:",len(value_vocab))
+np.savez('../data/python/typeVocabulary.npz',type_vocab = type_vocab)
 
+'''
 
 now = time.time()
 print("build vocabulary",now-time_start)
@@ -265,6 +267,6 @@ np.savez('../data/python/vocabulary_trainAndeval_50k.npz',value_vocab = value_vo
 
 
 
-
+'''
 
 

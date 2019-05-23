@@ -7,12 +7,10 @@
 @contact: 123@qq.com
 @site: 
 @software: PyCharm
-@file: Query_train_eval.py
-@time: 2019/4/28 15:33
-train -> train val
-val -> test
-time = 1
+@file: Query_train_eval2.py
+@time: 2019/4/29 9:45
 """
+
 
 import torch
 import torch.nn as nn
@@ -229,89 +227,50 @@ print("4 text -> index", now - time_start)
 
 # 5 padding and save
 import torch.nn.utils.rnn as rnn_utils
-
 import torch.utils.data as data
 
-class MyData(data.Dataset):
-    def __init__(self, data_seq, input_value, input_type, target, parent):
-        self.input_value = input_value
-        self.input_type = input_type
-        self.target = target
-        self.parent = parent
-        self.length = len(self.target)
-        self.data_length = [len(sq) for sq in data_seq]
-
-    def __len__(self):
-        return self.length
-
-    def __getitem__(self, idx):
-        return self.input_type[idx], self.input_value[idx], self.data_length[idx], self.target[idx], self.parent[
-            idx]
-
-import pickle
-import gc
 #all train
+v_train_all = rnn_utils.pad_sequence(input_value_train_all, batch_first=True)
+t_train_all = rnn_utils.pad_sequence(input_type_train_all, batch_first=True)
+train_all_length = [len(sq) for sq in input_value_train_all]
 
-x_train_all = rnn_utils.pad_sequence(input_value_train_all, batch_first=True)
-y_train_all = rnn_utils.pad_sequence(input_type_train_all, batch_first=True)
-dataAll_train_all = MyData(input_value_train_all, x_train_all, y_train_all, target_train_all, parent_train_all)
-print(20*"#")
-print("train_all_data_length",dataAll_train_all.length)
-'''
-with open('../data/python/training_ALL_50k.pickle', 'wb') as f3:
-    pickle.dump(dataAll_train_all, f3, protocol=pickle.HIGHEST_PROTOCOL)
+print(20*"*")
+print("train_all_data_length",len(target_train_all))
+np.savez('../data/python/trainAll.npz',length= train_all_length, value=v_train_all, type=t_train_all ,target = target_train_all,parent = parent_train_all)
 
-del dataAll_train_all
-gc.collect()
-'''
+
 #train
+#start= time.time()
+v_train = rnn_utils.pad_sequence(input_value_train, batch_first=True)
+t_train = rnn_utils.pad_sequence(input_type_train, batch_first=True)
+train_length = [len(sq) for sq in input_value_train]
+
+print("train_all_data_length",len(target_train_all))
+np.savez('../data/python/train.npz',length= train_length, value=v_train, type=t_train ,target = target_train,parent = parent_train)
 
 
-x_train = rnn_utils.pad_sequence(input_value_train, batch_first=True)
-y_train = rnn_utils.pad_sequence(input_type_train, batch_first=True)
-
-dataAll_train = MyData(input_value_train, x_train, y_train, target_train, parent_train)
-
-print("train_data_length",dataAll_train.length)
-'''
-#print("make mydata time spend",end - start)
-with open('../data/python/train3_50k.pickle', 'wb') as f1:
-    pickle.dump(dataAll_train, f1, protocol=pickle.HIGHEST_PROTOCOL)
-
-
-del dataAll_train
-gc.collect()
-'''
 # eval
-x_eval = rnn_utils.pad_sequence(input_value_eval, batch_first=True)
-y_eval = rnn_utils.pad_sequence(input_type_eval, batch_first=True)
-dataAll_eval = MyData(input_value_eval, x_eval, y_eval, target_eval, parent_eval)
-print("eval_data_length",dataAll_eval.length)
-'''
-with open('../data/python/eval3_50k.pickle', 'wb') as f2:
-    pickle.dump(dataAll_eval, f2, protocol=pickle.HIGHEST_PROTOCOL)
+v_eval = rnn_utils.pad_sequence(input_value_eval, batch_first=True)
+t_eval = rnn_utils.pad_sequence(input_type_eval, batch_first=True)
+eval_length = [len(sq) for sq in input_value_eval]
 
-del dataAll_eval
-gc.collect()
-'''
+print("eval_data_length",len(target_eval))
+np.savez('../data/python/eval.npz',length= eval_length, value=v_eval, type=t_eval ,target = target_eval,parent = parent_eval)
+
 #test
-x_test = rnn_utils.pad_sequence(input_value_test, batch_first=True)
-y_test = rnn_utils.pad_sequence(input_type_test, batch_first=True)
-dataAll_test = MyData(input_value_test, x_test, y_test, target_test, parent_test)
-print("test_data_length",dataAll_test.length)
-print(20*"#")
-'''
-with open('../data/python/test2_50k.pickle', 'wb') as f3:
-    pickle.dump(dataAll_test, f3, protocol=pickle.HIGHEST_PROTOCOL)
+v_test = rnn_utils.pad_sequence(input_value_test, batch_first=True)
+t_test = rnn_utils.pad_sequence(input_type_test, batch_first=True)
+test_length = [len(sq) for sq in input_value_test]
 
-del dataAll_test
-gc.collect()
-'''
+print("test_data_length",len(target_test))
+print(20*"#")
+np.savez('../data/python/test.npz',length= test_length, value=v_test, type=t_test ,target = target_test,parent = parent_test)
+
 now = time.time()
 print("5. padding ", now - time_start)
 
 # 6 save
-#np.savez('../data/python/vocabulary_50k.npz', value_vocab=value_vocab, type_vocab=type_vocab)
+np.savez('../data/python/vocabulary_50k.npz', value_vocab=value_vocab, type_vocab=type_vocab)
 now = time.time()
 print("6. save ", now - time_start)
 

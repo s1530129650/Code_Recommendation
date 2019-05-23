@@ -25,16 +25,18 @@ import json # load data
 import  pickle #save data
 
 use_gpu = False
-#use_gpu = True
+use_gpu = True
 
 if use_gpu:
     device = torch.device("cuda")
     max_vocab_size = 10000
     CONTEXT_WINDOW = 100
+    min_snippet_len = 3
 else:
     device = torch.device("cpu")
     max_vocab_size = 100
     CONTEXT_WINDOW = 100
+    min_snippet_len = 3
 
 
 time_start = time.time()
@@ -66,12 +68,20 @@ now = time.time()
 print("data loading",now-time_start)
 ## 2. build vocabulary
 def build_vocab(data):
-    type_to_ix = {"EOF": 0,"UNK":1}
+    type_to_ix = {}
     word_to_ix = {}
     for i in range(len(data)):
         for item in data[i]:
+            '''
             if item["type"] not in type_to_ix:
                 type_to_ix[item["type"]] = len(type_to_ix)
+            '''
+            if "type" in item.keys():
+                if item["type"] in type_to_ix:
+                    type_to_ix[item["type"]] = type_to_ix[item["type"]] + 1
+                else:
+                    type_to_ix[item["type"]] = 1
+
             if "value" in item.keys():
                 if item["value"] in word_to_ix:
                     word_to_ix[item["value"]] = word_to_ix[item["value"]] + 1
@@ -80,13 +90,56 @@ def build_vocab(data):
 
     # 1k 10k  50k vocabulary
     L = sorted(word_to_ix.items(), key=lambda item: item[1], reverse=True)
+    list1 = list(word_to_ix.values())
+
+    #print("terminal",np.sum(list1))
     value_to_ix = {"EOF": 0,"UNK":1}
     for i in range(max_vocab_size):
         value_to_ix[L[i][0]] = len(value_to_ix)
+
+    L1 = sorted(type_to_ix.items(), key=lambda item: item[1], reverse=True)
+    type_to_ix = {"EOF": 0, "UNK": 1}
+    for i in range(len(L1)):
+        type_to_ix[L[i][0]] = len(type_to_ix)
+    #print(L1)
     return type_to_ix, value_to_ix
 
 type_vocab,value_vocab = build_vocab(training_data)
 
+
+## 4 make queries
+def make_queries(dataList):
+    queries = []
+    for data in dataList:  # one AST
+        length = len(data)
+        if length < min_snippet_len or length > 2000:  # quit too small sample
+            continue
+
+        for i in range(min_snippet_len, length):  # make queries for one node
+            if "value" not in data[i]:  # fine terminal
+                continue
+            # find same terminal  in the context
+            for j in range(i - 1, max(i - CONTEXT_WINDOW - 1, -1), -1):  #
+                if "value" in data[j] and data[j]["value"] == data[i]["value"]:
+                    Tree = data[:i]
+
+                    queries.append(Tree)
+                    break
+                    # print(Tree,label)
+        print("len",len(queries))
+
+    return queries
+
+quer_data = make_queries(training_data)
+print(len(quer_data))
+
+#print(len(type_vocab))
+#print(len(value_vocab))
+#print(type_vocab)
+#js = json.dumps(type_vocab)
+"""
+with open('type.txt', 'w') as f:
+    f.write(js)
 
 
 # 3. make the queries
@@ -182,3 +235,4 @@ with codecs.open(r"..\data\python\QUERIES\python_train.json",'w', 'utf-8') as ou
         outf.write('\n')
 
 '''
+"""
